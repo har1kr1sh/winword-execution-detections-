@@ -1,1 +1,23 @@
+// Title: MS Word Child Process Spawning with Outbound Network Connection
+// Description: Identifies winword.exe spawning PowerShell/CMD followed by network traffic, indicative of reverse shell callbacks.
+// MITRE ATT&CK: T1059.001, T1071.001
 
+let WordChildProcesses = 
+    DeviceProcessEvents
+    | where Timestamp > ago(7d)
+    | where InitiatingProcessFileName =~ "winword.exe"
+    | where FileName in~ ("powershell.exe", "pwsh.exe", "cmd.exe")
+    | project Timestamp, DeviceId, DeviceName, ParentProcessId = InitiatingProcessId, ChildProcessId = ProcessId, ProcessCommandLine, AccountName;
+
+let NetworkConnections = 
+    DeviceNetworkEvents
+    | where Timestamp > ago(7d)
+    | where InitiatingProcessFileName in~ ("powershell.exe", "pwsh.exe", "cmd.exe", "winword.exe")
+    | where RemoteIPType !in ("Loopback", "LinkLocal") and isnotprivate(RemoteIP)
+    | project NetworkTime = Timestamp, DeviceId, InitiatingProcessFileName, RemoteIP, RemotePort, RemoteUrl;
+
+WordChildProcesses
+| join kind=inner NetworkConnections on DeviceId
+| where NetworkTime >= Timestamp and NetworkTime <= Timestamp + 5m
+| project Timestamp, DeviceName, AccountName, InitiatingProcessFileName, ProcessCommandLine, RemoteIP, RemotePort, RemoteUrl
+| order by Timestamp desc
