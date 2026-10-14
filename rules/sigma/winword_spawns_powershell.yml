@@ -1,1 +1,31 @@
-
+title: Microsoft Word Spawning Suspicious Command Interpreters
+id: d7e8f9a0-1234-5678-9abc-def012345678
+status: experimental
+description: Detects Microsoft Word launching PowerShell, CMD, or Windows Script Host, which often indicates malicious macro execution or CVE exploitation.
+references:
+    - https://attack.mitre.org/techniques/T1566/001/
+    - https://attack.mitre.org/techniques/T1059/001/
+author: Hari Krishnan
+date: 2026/10/14
+tags:
+    - attack.initial_access
+    - attack.t1566.001
+    - attack.execution
+    - attack.t1059.001
+logsource:
+    category: process_creation
+    product: windows
+detection:
+    parent_process:
+        ParentImage|endswith: '\winword.exe'
+    child_process:
+        Image|endswith:
+            - '\powershell.exe'
+            - '\pwsh.exe'
+            - '\cmd.exe'
+            - '\wscript.exe'
+            - '\cscript.exe'
+    condition: parent_process and child_process
+falsepositives:
+    - Custom enterprise Word add-ins running legacy internal macros (rare).
+level: high
