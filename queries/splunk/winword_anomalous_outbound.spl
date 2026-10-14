@@ -1,1 +1,5 @@
-
+index=sysmon EventCode=3 Image="*\\winword.exe"
+| where NOT (cidrmatch("10.0.0.0/8", DestinationIp) OR cidrmatch("172.16.0.0/12", DestinationIp) OR cidrmatch("192.168.0.0/16", DestinationIp))
+| stats count min(_time) as first_seen max(_time) as last_seen by Computer, User, Image, DestinationIp, DestinationPort
+| convert timeformat="%Y-%m-%d %H:%M:%S" ctime(first_seen) ctime(last_seen)
+| sort - count
